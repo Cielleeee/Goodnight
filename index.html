@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Animated Day & Night</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      overflow: hidden;
+      font-family: 'Segoe UI', sans-serif;
+      transition: background-color 1s ease;
+    }
+    body.day {
+      background-color: skyblue;
+      color: #333;
+    }
+    body.night {
+      background-color: #0a0a3c;
+      color: white;
+    }
+    .center-text {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 10;
+    }
+    .greeting {
+      font-size: 3em;
+      font-weight: bold;
+    }
+    .message {
+      font-size: 1.5em;
+      margin-top: 10px;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div class="center-text">
+    <div class="greeting">Hello</div>
+    <div class="message">Welcome!</div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const greeting = document.querySelector('.greeting');
+    const message = document.querySelector('.message');
+    const body = document.body;
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles = [];
+    let moonAngle = 0;
+
+    // Load your sticker image (put image.png in the same folder)
+    const stickerImg = new Image();
+    stickerImg.src = 'image.png'; 
+    let stickerLoaded = false;
+    stickerImg.onload = () => {
+      stickerLoaded = true;
+    };
+
+    function isNight() {
+      const hour = new Date().getHours();
+      return hour >= 18 || hour < 5;
+    }
+
+    function updateGreeting() {
+      if (isNight()) {
+        body.classList.remove('day');
+        body.classList.add('night');
+        greeting.textContent = 'Goodnight';
+        message.textContent = 'Sleep Well';
+      } else {
+        body.classList.remove('night');
+        body.classList.add('day');
+        greeting.textContent = 'Goodmorning';
+        message.textContent = 'HIIII HAHAHAHHAHAAHHAAH, AGA MO MATULOG';
+      }
+    }
+
+    function createStar() {
+      return {
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height * 0.5,
+        radius: Math.random() * 2 + 1,
+        opacity: Math.random() * 0.4 + 0.4,
+        speed: Math.random() * 1.5 + 0.5,
+        twinkle: Math.random() * 0.02 + 0.01
+      };
+    }
+
+    function createCloud() {
+      return {
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height * 0.6,
+        width: Math.random() * 60 + 30,
+        height: Math.random() * 30 + 15,
+        opacity: Math.random() * 0.2 + 0.3,
+        speedX: Math.random() * 0.8 + 0.3,
+        speedY: Math.random() * 0.2 - 0.1
+      };
+    }
+
+    function initializeParticles() {
+      particles.length = 0;
+      const isMobile = window.innerWidth <= 600;
+      const particleCount = isNight() ? (isMobile ? 60 : 120) : (isMobile ? 8 : 15);
+      for (let i = 0; i < particleCount; i++) {
+        particles.push(isNight() ? createStar() : createCloud());
+      }
+    }
+
+    function drawRotatingMoon() {
+      const moonX = canvas.width - 120;
+      const moonY = 120;
+      const radius = 50;
+
+      ctx.save();
+      ctx.translate(moonX, moonY);
+      ctx.rotate(moonAngle);
+      
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#e5e4ff';
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.2)';
+      ctx.shadowBlur = 20;
+      ctx.fill();
+
+      ctx.font = "32px serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("😴", 0, 0);
+
+      ctx.restore();
+    }
+
+    function drawSticker() {
+      if (!stickerLoaded || !isNight()) return;
+      const width = 120;
+      const height = 120;
+      const x = canvas.width - width - 20;
+      const y = canvas.height - height - 20;
+      ctx.drawImage(stickerImg, x, y, width, height);
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (isNight()) {
+        drawRotatingMoon();
+        drawSticker();
+        moonAngle += 0.002;
+      }
+
+      particles.forEach(particle => {
+        if (isNight()) {
+          particle.y += particle.speed;
+          particle.opacity += particle.twinkle;
+          if (particle.opacity > 0.8 || particle.opacity < 0.4) particle.twinkle = -particle.twinkle;
+          if (particle.y > canvas.height) {
+            particle.y = 0;
+            particle.x = Math.random() * canvas.width;
+            particle.speed = Math.random() * 1.5 + 0.5;
+          }
+          ctx.beginPath();
+          ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 200, ${particle.opacity})`;
+          ctx.fill();
+        } else {
+          particle.x += particle.speedX;
+          particle.y += particle.speedY;
+          if (particle.x > canvas.width) {
+            particle.x = -particle.width;
+            particle.y = Math.random() * canvas.height * 0.6;
+            particle.speedX = Math.random() * 0.8 + 0.3;
+          }
+          if (particle.y < 0 || particle.y > canvas.height * 0.6) {
+            particle.speedY = -particle.speedY;
+          }
+          ctx.beginPath();
+          ctx.ellipse(particle.x, particle.y, particle.width / 2, particle.height / 2, 0, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 255, ${particle.opacity})`;
+          ctx.fill();
+        }
+      });
+
+      requestAnimationFrame(animate);
+    }
+
+    updateGreeting();
+    initializeParticles();
+    animate();
+
+    setInterval(() => {
+      updateGreeting();
+      initializeParticles();
+    }, 60000);
+
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      initializeParticles();
+    });
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      initializeParticles();
+    });
+  </script>
+</body>
+</html>
